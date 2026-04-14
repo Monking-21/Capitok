@@ -2,6 +2,17 @@
 
 Auto-saves every Hermes conversation turn to Capitok memory gateway for persistent storage and retrieval.
 
+## Quick Install
+
+If you already cloned Capitok, install the plugin and sync Hermes config with one command:
+
+```bash
+bash scripts/install-hermes-plugin.sh
+```
+
+The installer copies `integrations/hermes` into your Hermes plugin directory and reads Capitok settings from the shell environment first, then from the repo's `.env` or `.env.dev`.
+If you want to override values manually, export `CAPITOK_API_URL`, `CAPITOK_API_KEY`, `CAPITOK_AUTO_SAVE`, or `CAPITOK_TIMEOUT` before running the script.
+
 ## Features
 
 - **Auto-save**: Every turn is automatically saved to Capitok in background (non-blocking)
@@ -12,19 +23,13 @@ Auto-saves every Hermes conversation turn to Capitok memory gateway for persiste
 
 ## Installation
 
-### 1. Copy plugin to Hermes
+### 1. One-command install
 
 ```bash
-# Clone or copy Capitok repo first if not already done
-git clone https://github.com/yourusername/Capitok.git
-
-# Copy the plugin to Hermes plugins directory
-cp -r Capitok/integrations/hermes ~/.hermes/plugins/capitok
-# Or if you're developing locally:
-cp -r Capitok/integrations/hermes /path/to/hermes-agent/plugins/capitok
+bash scripts/install-hermes-plugin.sh
 ```
 
-### 2. Configure Capitok endpoint
+### 2. Configure Capitok endpoint manually
 
 **Option A: Environment variables (recommended for servers)**
 
@@ -57,6 +62,8 @@ plugins:
 ```bash
 hermes plugins  # Navigate to Capitok plugin and configure
 ```
+
+If you use the installer, it will write the Capitok block for you, so you usually do not need to edit `config.yaml` manually.
 
 ## Configuration
 
