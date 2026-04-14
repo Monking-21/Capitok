@@ -21,6 +21,7 @@ Capitok is an open-source memory architecture for AI agents focused on recoverab
 - Architecture (Chinese): [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)
 - Implementation Status and Plan (English): [docs/implementation-status.md](docs/implementation-status.md)
 - 实施进展与下一步计划（中文）: [docs/implementation-status.zh-CN.md](docs/implementation-status.zh-CN.md)
+- Hermes integration guide: [integrations/hermes/README.md](integrations/hermes/README.md)
 - Chinese README: [README.zh-CN.md](README.zh-CN.md)
 
 ## Repository Structure
@@ -127,6 +128,24 @@ curl "http://localhost:8000/v1/search?query=Tushare&top_k=5" \
     -H "X-API-Key: dev-ingest-search-key"
 ```
 
+### Hermes Integration
+
+Install and configure the Hermes plugin in one command:
+
+```bash
+bash scripts/install-hermes-plugin.sh
+```
+
+Then verify it:
+
+```bash
+hermes doctor
+curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+```
+
+The installer copies `integrations/hermes` into your Hermes plugin directory and reads Capitok settings from the shell environment first, then from the repo's `.env` or `.env.dev`.
+You can still override values by exporting `CAPITOK_API_URL`, `CAPITOK_API_KEY`, `CAPITOK_AUTO_SAVE`, or `CAPITOK_TIMEOUT` before running it.
+
 Current MVP supports:
 
 1. API key auth with tenant and principal mapping
@@ -137,6 +156,8 @@ Current MVP supports:
 6. Automated schema snapshot export from database
 7. uv as the default package manager and command runner
 8. Dual compose model: default production + explicit dev/test profile
+
+For the full Hermes plugin guide, see [integrations/hermes/README.md](integrations/hermes/README.md).
 
 Schema snapshot workflow:
 
