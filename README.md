@@ -69,19 +69,26 @@ Capitok is an open-source memory architecture for AI agents focused on recoverab
 
 ### Production (default)
 
-1. Install uv:
+1. Clone repository and enter project directory:
+
+```bash
+git clone https://github.com/Monking-21/Capitok.git
+cd Capitok
+```
+
+2. Install uv:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2. Create environment file:
+3. Create environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Start production-oriented default stack:
+4. Start production-oriented default stack:
 
 ```bash
 docker compose up --build
