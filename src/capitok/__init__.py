@@ -1,0 +1,1 @@
+"""Capitok application package."""

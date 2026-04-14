@@ -1,0 +1,139 @@
+openapi: 3.0.3
+info:
+  title: Capitok Gateway API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service status
+  /v1/ingest:
+    post:
+      summary: Ingest one interaction into raw and refined layers
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Accepted and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          description: Missing or invalid API key
+        '403':
+          description: Missing scope
+        '422':
+          description: Validation error
+  /v1/search:
+    get:
+      summary: Search refined memories
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: top_k
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '401':
+          description: Missing or invalid API key
+        '403':
+          description: Missing scope
+        '422':
+          description: Validation error
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    IngestRequest:
+      type: object
+      required:
+        - session_id
+        - user_id
+      properties:
+        session_id:
+          type: string
+        user_id:
+          type: string
+        source:
+          type: string
+          default: agent
+        input:
+          type: string
+        output:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    IngestResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+    SearchResult:
+      type: object
+      required:
+        - id
+        - session_id
+        - user_id
+        - text
+        - score
+        - created_at
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+        user_id:
+          type: string
+        text:
+          type: string
+        score:
+          type: number
+          format: float
+        created_at:
+          type: string
+          format: date-time
+    SearchResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'

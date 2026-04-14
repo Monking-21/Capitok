@@ -1,0 +1,4 @@
+name: capitok
+version: 0.1.0
+description: Auto-saves Hermes conversations to Capitok memory store
+dependencies: []

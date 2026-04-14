@@ -1,0 +1,41 @@
+# Development and test profile
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: capitok-db-dev
+    environment:
+      POSTGRES_DB: capitok
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - capitok_db_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d capitok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: python:3.12-slim
+    container_name: capitok-api-dev
+    working_dir: /app
+    env_file:
+      - .env.dev
+    environment:
+      APP_ENV: dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/capitok
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    command: bash /app/scripts/start-api.sh --dev
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  capitok_db_data_dev:

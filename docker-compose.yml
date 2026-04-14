@@ -1,0 +1,38 @@
+# Default deployment profile (production-oriented)
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: capitok-db-prod
+    environment:
+      POSTGRES_DB: capitok
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - capitok_db_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d capitok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: capitok-api-prod
+    working_dir: /app
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: bash /app/scripts/start-api.sh --prod
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:${DB_PASSWORD:-change-me}@db:5432/capitok
+    restart: unless-stopped
+
+volumes:
+  capitok_db_data_prod:
