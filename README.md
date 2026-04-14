@@ -1,6 +1,19 @@
 # Capitok
 
-Capitok is an open-source memory architecture for AI agents focused on recoverability, retrieval quality, and migration safety.
+Capitok is an open-source raw conversation archive and recovery layer for AI agents.
+It is designed to complement mainstream memory frameworks, not replace them.
+
+Archive first. Rebuild later.
+Capitok stores the conversations your agents already paid for so they remain portable across context resets, device changes, and framework migrations.
+
+## Project Positioning
+
+Capitok treats consumed context and tokens as durable assets:
+
+- Preserve raw agent conversations before they disappear from context windows
+- Keep an independent archive across device, runtime, or framework changes
+- Make future replay, re-indexing, and memory reconstruction possible
+- Complement tools such as Mem0 as an archive and recovery layer beneath higher-level memory workflows
 
 ## Project Status
 
@@ -11,8 +24,9 @@ Capitok is an open-source memory architecture for AI agents focused on recoverab
 ## Highlights
 
 - Raw-first data strategy for long-term recoverability
-- Hybrid retrieval design (vector + full-text)
-- Middleware decoupling between agent runtime and memory storage
+- Archive-first design for replay, export, and migration
+- Middleware decoupling between agent runtime and stored conversation assets
+- Baseline retrieval as a derived helper capability, not the primary product goal
 - Container-first operations model for portability
 
 ## Documentation
@@ -157,12 +171,15 @@ Current MVP supports:
 
 1. API key auth with tenant and principal mapping
 2. Raw chat log persistence
-3. Async in-process refinement queue
-4. Tenant and principal scoped search
+3. Async in-process derived-text write path
+4. Tenant and principal scoped baseline search
 5. Alembic-based database migrations as the primary schema workflow
 6. Automated schema snapshot export from database
 7. uv as the default package manager and command runner
 8. Dual compose model: default production + explicit dev/test profile
+
+Current MVP does not aim to be a full semantic memory framework.
+The searchable `refined_memories` table is a derived layer intended to support recall and future reconstruction workflows on top of the raw archive.
 
 For the full Hermes plugin guide, see [integrations/hermes/README.md](integrations/hermes/README.md).
 

@@ -1,6 +1,6 @@
 # Capitok Memory Plugin for Hermes
 
-Auto-saves every Hermes conversation turn to Capitok memory gateway for persistent storage and retrieval.
+Auto-saves every Hermes conversation turn to Capitok so the raw conversation can be archived, recovered, and reused later.
 
 ## Quick Install
 
@@ -13,10 +13,19 @@ bash scripts/install-hermes-plugin.sh
 The installer copies `integrations/hermes` into your Hermes plugin directory and reads Capitok settings from the shell environment first, then from the repo's `.env` or `.env.dev`.
 If you want to override values manually, export `CAPITOK_API_URL`, `CAPITOK_API_KEY`, `CAPITOK_AUTO_SAVE`, or `CAPITOK_TIMEOUT` before running the script.
 
+## Positioning
+
+Capitok is best used here as a companion archive layer:
+
+- Preserve full Hermes turns outside the active context window
+- Keep conversation history portable across machines and runtime changes
+- Support later replay, re-indexing, or import into higher-level memory systems
+- Provide basic recall without trying to become the primary memory framework
+
 ## Features
 
 - **Auto-save**: Every turn is automatically saved to Capitok in background (non-blocking)
-- **Semantic search**: Use `capitok_recall` tool to search past conversations
+- **Baseline search**: Use `capitok_recall` tool to search past archived conversations
 - **Manual save**: Use `capitok_save` tool to emphasize important context
 - **Cross-machine**: Works with Capitok running on any accessible network address
 - **Lightweight**: Uses standard library only, no external dependencies
@@ -214,10 +223,10 @@ Agent retrieves context when needed
 ## Performance
 
 - **Auto-save**: ~100ms background save (non-blocking)
-- **Search**: ~50ms (with 100k memories in database)
+- **Search**: environment-dependent baseline recall over derived records
 - **Network**: Works over any HTTP connection
 
-Capitok is designed for long-term memory durability, not real-time processing.
+Capitok is designed for long-term durability and recovery of conversation assets, not for taking over the primary memory framework role in real-time reasoning.
 
 ## Security
 

@@ -2,6 +2,7 @@ openapi: 3.0.3
 info:
   title: Capitok Gateway API
   version: 0.1.0
+  description: API for archiving raw agent conversations and querying derived recall records.
 paths:
   /health:
     get:
@@ -11,7 +12,7 @@ paths:
           description: Service status
   /v1/ingest:
     post:
-      summary: Ingest one interaction into raw and refined layers
+      summary: Archive one interaction and enqueue derived recall indexing
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -22,7 +23,7 @@ paths:
               $ref: '#/components/schemas/IngestRequest'
       responses:
         '200':
-          description: Accepted and queued
+          description: Raw interaction archived and derived indexing accepted
           content:
             application/json:
               schema:
@@ -35,7 +36,7 @@ paths:
           description: Validation error
   /v1/search:
     get:
-      summary: Search refined memories
+      summary: Search derived recall records
       security:
         - ApiKeyAuth: []
       parameters:
@@ -55,7 +56,7 @@ paths:
             default: 10
       responses:
         '200':
-          description: Search results
+          description: Derived recall search results
           content:
             application/json:
               schema:

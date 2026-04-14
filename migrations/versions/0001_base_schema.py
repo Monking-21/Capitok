@@ -54,7 +54,7 @@ def upgrade() -> None:
 
     op.execute(
         """
-        COMMENT ON TABLE raw_chat_logs IS 'Append-only raw interaction log. Acts as the master backup layer.'
+        COMMENT ON TABLE raw_chat_logs IS 'Append-only raw interaction log. Acts as the source-of-truth archive layer.'
         """
     )
     op.execute(
@@ -74,17 +74,17 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        COMMENT ON TABLE refined_memories IS 'Refined, searchable memory records used by retrieval.'
+        COMMENT ON TABLE refined_memories IS 'Derived searchable records generated from the raw archive for recall workflows.'
         """
     )
     op.execute(
         """
-        COMMENT ON COLUMN refined_memories.embedding_version IS 'Tracks which embedding model/version produced this vector.'
+        COMMENT ON COLUMN refined_memories.embedding_version IS 'Tracks which downstream embedding model/version produced this vector.'
         """
     )
     op.execute(
         """
-        COMMENT ON COLUMN refined_memories.search_vector IS 'Generated tsvector column for keyword and exact-term recall.'
+        COMMENT ON COLUMN refined_memories.search_vector IS 'Generated tsvector column for baseline keyword recall over derived records.'
         """
     )
 

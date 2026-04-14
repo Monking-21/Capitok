@@ -35,6 +35,7 @@ Files:
 - SQL schema now includes maintainability comments for isolation, embedding versioning, and search behavior.
 - Alembic migration workflow is now the primary way to evolve database structure.
 - Schema snapshot automation script added to export `sql/schema.sql` from the live database.
+- `raw_chat_logs` is treated as the source-of-truth archive layer; `refined_memories` is a derived retrieval layer.
 
 Files:
 - [sql/schema.sql](../sql/schema.sql)
@@ -78,9 +79,9 @@ Files:
 
 ## 2. In Progress
 
-- Align implementation details with architecture docs for hybrid retrieval behavior.
+- Align implementation details with the archive-first project positioning.
 - Add basic tests for ingest and search paths.
-- Review whether the initial refined-memory write path should stay simple text-first until Mem0 embedding integration is finalized.
+- Review whether the initial derived-memory write path should stay simple text-first until external memory integrations are finalized.
 
 ## 3. Next-Step Development Plan
 
@@ -116,12 +117,12 @@ Files:
 - Redis Streams first option
 - retry and dead-letter support
 
-2. Hybrid retrieval upgrade
-- combine FTS and vector scores explicitly
-- add ranking config switches
+2. Retrieval capability upgrade
+- keep retrieval clearly positioned as a derived helper capability
+- add ranking config switches only when they help recall on top of the raw archive
 
 3. Mem0 adapter refinement
-- plug in embedding generation path
+- refine replay or export path into Mem0-like systems
 - keep `embedding_version` strategy consistent
 
 ### Phase C (v0.3+)

@@ -18,7 +18,7 @@ def health() -> dict:
 
 
 @app.post("/v1/ingest", response_model=IngestResponse)
-async def ingest_memory(
+async def archive_interaction(
     payload: IngestRequest,
     identity: IdentityContext = Depends(require_scope("ingest")),
 ) -> IngestResponse:
@@ -52,11 +52,11 @@ async def ingest_memory(
         )
     )
 
-    return IngestResponse(status="queued", message="Ingest accepted")
+    return IngestResponse(status="queued", message="Raw interaction archived; derived recall indexing queued")
 
 
 @app.get("/v1/search", response_model=SearchResponse)
-def search_memory(
+def search_recall_records(
     query: str = Query(min_length=1),
     top_k: int = Query(default=10, ge=1, le=50),
     identity: IdentityContext = Depends(require_scope("search")),

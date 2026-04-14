@@ -5,9 +5,9 @@
 --
 -- Design notes:
 -- 1. raw_chat_logs is append-only and stores the immutable source of truth.
--- 2. refined_memories stores searchable, tenant-scoped distilled memory items.
+-- 2. refined_memories stores tenant-scoped derived recall records rebuilt from raw data when needed.
 -- 3. tenant_id and principal_id are mandatory for every row to enforce isolation.
--- 4. embedding_version is required so embeddings can be regenerated later.
+-- 4. embedding_version is required so downstream embeddings can be regenerated later.
 -- 5. search_vector is derived from text for stable full-text search behavior.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS raw_chat_logs (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE raw_chat_logs IS 'Append-only raw interaction log. Acts as the master backup layer.';
+COMMENT ON TABLE raw_chat_logs IS 'Append-only raw interaction log. Acts as the source-of-truth archive layer.';
 COMMENT ON COLUMN raw_chat_logs.tenant_id IS 'Server-derived tenant boundary. Never trust client-provided isolation.';
 COMMENT ON COLUMN raw_chat_logs.principal_id IS 'Server-derived principal or user context for scoped access.';
 COMMENT ON COLUMN raw_chat_logs.content IS 'Raw JSON payload from the agent/runtime integration.';
@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS refined_memories (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE refined_memories IS 'Refined, searchable memory records used by retrieval.';
-COMMENT ON COLUMN refined_memories.embedding_version IS 'Tracks which embedding model/version produced this vector.';
-COMMENT ON COLUMN refined_memories.search_vector IS 'Generated tsvector column for keyword and exact-term recall.';
+COMMENT ON TABLE refined_memories IS 'Derived searchable records generated from the raw archive for recall workflows.';
+COMMENT ON COLUMN refined_memories.embedding_version IS 'Tracks which downstream embedding model/version produced this vector.';
+COMMENT ON COLUMN refined_memories.search_vector IS 'Generated tsvector column for baseline keyword recall over derived records.';
 
 CREATE INDEX IF NOT EXISTS idx_refined_memories_tenant_principal_created
     ON refined_memories (tenant_id, principal_id, created_at DESC);

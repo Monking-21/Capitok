@@ -1,4 +1,4 @@
-"""Capitok memory storage plugin for Hermes Agent.
+"""Capitok archive companion plugin for Hermes Agent.
 
 Auto-saves every conversation turn to Capitok via HTTP hooks.
 
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class CapitokClient:
-    """HTTP client for Capitok memory gateway."""
+    """HTTP client for the Capitok archive gateway."""
 
     def __init__(self, api_url: str, api_key: str, timeout: float = 5.0):
         self.api_url = api_url.rstrip("/")
@@ -84,7 +84,7 @@ class CapitokClient:
             return {"status": "error", "message": str(e)}
 
     def search(self, query: str, top_k: int = 10) -> Dict[str, Any]:
-        """GET /v1/search to retrieve memories."""
+        """GET /v1/search to retrieve derived recall records."""
         if not self._user_id:
             raise ValueError("user_id must be set before search")
 
@@ -207,7 +207,7 @@ def on_turn_end(
 
 CAPITOK_RECALL_SCHEMA = {
     "name": "capitok_recall",
-    "description": "Search Capitok memory store for past conversations and context.",
+    "description": "Search Capitok archive-derived recall records for past conversations and context.",
     "parameters": {
         "type": "object",
         "properties": {

@@ -2,6 +2,9 @@
 
 This document describes the technical design goals, architecture, storage model, and operational strategy for Capitok.
 
+Capitok is positioned as a raw conversation archive and recovery substrate for agent systems.
+It complements upstream memory frameworks by preserving source conversations so they can be replayed, re-indexed, or reconstructed later.
+
 ## Design Principles (Avoid Over-Engineering)
 
 Capitok uses a boundary-first and implementation-later strategy:
@@ -15,8 +18,8 @@ Capitok uses a boundary-first and implementation-later strategy:
 ### MVP (must-have)
 
 - Basic authentication (API key or JWT)
-- Raw ingest and baseline retrieval
-- Minimal hybrid search (vector + full-text)
+- Raw ingest and durable archive boundary
+- Baseline retrieval over derived records
 - Backup and restore scripts
 
 ### Reserved (optional for first release)
@@ -28,9 +31,10 @@ Capitok uses a boundary-first and implementation-later strategy:
 
 ## Design Goals
 
-- Maximum data safety with master-grade backups
-- Industrial retrieval performance with hybrid search
-- Low migration and recovery cost via containerized deployment
+- Preserve raw agent conversations as durable assets
+- Keep migration and recovery cost low through an independent archive layer
+- Make replay, re-indexing, and downstream memory reconstruction possible
+- Provide baseline retrieval without positioning itself as the primary memory framework
 
 ## Logical Architecture
 
@@ -38,12 +42,12 @@ Capitok uses a boundary-first and implementation-later strategy:
 [ Agent Layer ]         OpenClaw (Plugin) / Hermes (Provider)
                                |
                                v
-[ Middleware Layer ]    FastAPI Gateway (Memory MaaS)
+[ Middleware Layer ]    FastAPI Gateway (Archive / Recovery MaaS)
                      /        |        \
-       (async raw) /   (async refine)  \ (sync search)
+      (sync raw)  /   (async derive)   \ (sync search)
                    /         |          \
-[ Storage Layer ]  Raw Postgres   Mem0 Logic   Refined Postgres
-                  (JSONB)       (processor)    (pgvector + tsvector)
+[ Storage Layer ]  Raw Postgres   Optional Upstream Memory Logic   Derived Postgres
+                  (JSONB)             (Mem0 etc.)                  (FTS / future vector)
 ```
 
 ## Storage Model (PostgreSQL 16+)
@@ -54,6 +58,7 @@ Use one PostgreSQL cluster with logical separation for hot and cold data.
 
 Purpose:
 - Persist every interaction as raw JSON
+- Act as the source-of-truth archive for recovery and replay
 
 Core fields:
 - id (uuid)
@@ -69,13 +74,13 @@ Core fields:
 ### Table B: refined_memories
 
 Purpose:
-- Store distilled atomic facts for retrieval
+- Store derived searchable records built from the raw archive
 
 Core design:
-- Embedding column: vector(1536) or model-aligned dimensions
-- Full-text column: tsvector for exact keyword recall
-- Hybrid retrieval: vector similarity + FTS ranking
-- ANN index: HNSW for scalable latency
+- Full-text column: tsvector for baseline keyword recall
+- Embedding column is reserved for future downstream integrations
+- Derived records can be rebuilt from raw archive data when indexing strategy changes
+- Retrieval quality is secondary to raw data durability in the MVP
 
 Suggested additional fields:
 - tenant_id (text)
@@ -84,7 +89,7 @@ Suggested additional fields:
 - updated_at (timestamptz)
 
 Performance note:
-- Treat p95 < 20ms at 100k memories as a benchmark target, not a hard guarantee.
+- Performance targets should be treated as environment-specific benchmarks, not product guarantees.
 
 ## Integration Plan
 
@@ -127,42 +132,34 @@ onResponseGenerated: async (context) => {
 ### Hermes Provider Setup
 
 1. Choose PostgreSQL as storage backend.
-2. Point Hermes memory endpoint to FastAPI gateway.
+2. Point Hermes archive or memory-facing endpoint to the FastAPI gateway.
 3. Enable trace-level logs only during troubleshooting.
 
-## FastAPI + Mem0 Core Flow
+## FastAPI Archive + Optional Memory Flow
 
 ```py
 from fastapi import BackgroundTasks, FastAPI
-from mem0 import Memory
 
 app = FastAPI()
 
-m = Memory.from_config({
-    "vector_store": {
-        "provider": "pgvector",
-        "config": {
-            "connection_string": "postgresql://postgres:pass@localhost:5432/memory_db"
-        },
-    }
-})
-
 @app.post("/v1/ingest")
 async def ingest_memory(data: dict, bg: BackgroundTasks):
-    bg.add_task(save_to_raw_db, data)
+    save_to_raw_db(data)
 
     text = f"{data.get('input', '')}\n{data.get('output', '')}"
-    bg.add_task(m.add, text, user_id=data["user_id"])
+    bg.add_task(save_derived_record, text, user_id=data["user_id"])
+    # Future: replay raw records into Mem0 or another memory framework when needed.
 
     return {"status": "queued"}
 
 @app.get("/v1/search")
 async def search_memory(query: str, user_id: str):
-    return m.search(query, user_id=user_id)
+    return search_derived_records(query, user_id=user_id)
 ```
 
 Reliability note:
-- Replace in-process background tasks with a durable queue in production.
+- The raw archive path is the critical durability boundary.
+- Replace in-process background tasks with a durable queue when derived indexing becomes operationally important.
 
 ### Queue Abstraction (reserved interface)
 
@@ -182,7 +179,8 @@ Later implementations can use Redis Streams, RabbitMQ, or Postgres-based queues.
 - Mount DB data to encrypted disk or NAS.
 
 2. Backups:
-- Schedule nightly dumps for both raw and refined tables.
+- Prioritize the raw archive for recovery guarantees.
+- Dump both raw and derived tables when derived retrieval state matters operationally.
 
 ```bash
 pg_dump -t raw_chat_logs -t refined_memories memory_db > memory_backup.sql
@@ -198,7 +196,7 @@ pg_dump -t raw_chat_logs -t refined_memories memory_db > memory_backup.sql
 
 - Expose metrics endpoint (for example Prometheus)
 - Structured logs with trace_id and tenant_id
-- Basic alerts for error rate, queue lag, and retrieval latency
+- Basic alerts for error rate, archive write failures, queue lag, and retrieval latency
 
 ### Enhanced (visual operations)
 
@@ -207,6 +205,6 @@ pg_dump -t raw_chat_logs -t refined_memories memory_db > memory_backup.sql
 
 ## Risk Model
 
-- Mem0 replacement risk: data remains in PostgreSQL
-- Model migration risk: embeddings can be regenerated from raw logs
-- Agent crash risk: memory service remains independent
+- Upstream memory-framework replacement risk: raw data remains in PostgreSQL
+- Model migration risk: derived records and embeddings can be regenerated from raw logs
+- Agent crash risk: archive service remains independent

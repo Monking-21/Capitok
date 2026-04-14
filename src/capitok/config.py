@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Capitok Gateway"
+    app_name: str = "Capitok Archive Gateway"
     app_env: str = "dev"
     app_host: str = "0.0.0.0"
     app_port: int = 8000

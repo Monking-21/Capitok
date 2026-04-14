@@ -35,6 +35,7 @@
 - SQL schema 已补充维护备注，明确租户隔离、embedding_version 与搜索行为约束。
 - Alembic migration 现已成为数据库演进的主方式。
 - 已增加 schema 快照导出脚本，可从数据库自动刷新 `sql/schema.sql`。
+- 已明确 `raw_chat_logs` 为源数据归档层，`refined_memories` 为派生检索层。
 
 对应文件：
 - [sql/schema.sql](../sql/schema.sql)
@@ -78,9 +79,9 @@
 
 ## 2. 进行中
 
-- 继续对齐架构文档与实现细节，完善混合检索行为。
+- 继续对齐架构文档与“归档优先”的项目定位。
 - 增加 ingest/search 路径的基础测试。
-- 评估当前 refined memory 写入链路是否先保持文本优先，再补齐 Mem0 embedding 接入。
+- 评估当前派生记录写入链路是否先保持文本优先，再补齐外部 memory 集成。
 
 ## 3. 下一步开发计划
 
@@ -116,12 +117,12 @@
 - 首选 Redis Streams
 - 补齐重试与死信
 
-2. 混合检索升级
-- 显式融合 FTS 与向量得分
-- 增加检索策略开关
+2. 检索能力升级
+- 保持检索能力作为派生辅助层来设计
+- 仅在有助于原始归档 recall 时增加检索策略开关
 
 3. Mem0 适配完善
-- 接入 embedding 生成路径
+- 完善向 Mem0 等系统的重放或导出路径
 - 对齐 `embedding_version` 策略
 
 ### Phase C（v0.3+）
