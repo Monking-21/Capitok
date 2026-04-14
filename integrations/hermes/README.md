@@ -1,6 +1,6 @@
 # Capitok Memory Plugin for Hermes
 
-Auto-saves every Hermes conversation turn to Capitok so the raw conversation can be archived, recovered, and reused later.
+Auto-saves every successful Hermes conversation turn to Capitok so the raw conversation can be archived, recovered, and reused later.
 
 ## Quick Install
 
@@ -24,7 +24,7 @@ Capitok is best used here as a companion archive layer:
 
 ## Features
 
-- **Auto-save**: Every turn is automatically saved to Capitok in background (non-blocking)
+- **Auto-save**: Every successful turn is automatically saved to Capitok after the LLM finishes responding
 - **Baseline search**: Use `capitok_recall` tool to search past archived conversations
 - **Manual save**: Use `capitok_save` tool to emphasize important context
 - **Cross-machine**: Works with Capitok running on any accessible network address
@@ -80,18 +80,18 @@ If you use the installer, it will write the Capitok block for you, so you usuall
 |-----|---------|-------------|----------|
 | `api_url` | `http://localhost:8000` | Capitok API endpoint | ✓ |
 | `api_key` | - | Authentication key (from Capitok `.env`) | ✓ |
-| `auto_save` | `true` | Auto-save each turn | |
+| `auto_save` | `true` | Auto-save each successful turn | |
 | `timeout` | `5.0` | HTTP request timeout in seconds | |
 
 ## Usage
 
 ### Automatic saving (always on if configured)
 
-Every turn is automatically saved:
+Every successful turn is automatically saved:
 ```
 User: "What are my project deadlines?"
 Hermes: "Based on your memories, you have..."
-[Capitok plugin saves this turn in background]
+[Capitok plugin saves this turn after the response completes]
 ```
 
 ### Search memories with `capitok_recall`
@@ -139,9 +139,9 @@ hermes
 ### Check plugin is loaded
 
 ```bash
-hermes doctor
+hermes plugins list
 # Look for:
-# Plugins: capitok ... OK
+# capitok   enabled
 ```
 
 ### Manual test of connection
@@ -176,7 +176,7 @@ curl "http://localhost:8000/v1/search?query=test&top_k=5" \
 
 3. Check Hermes logs:
    ```bash
-   hermes doctor
+   hermes logs --since 10m
    ```
 
 ### Turns not being saved
@@ -191,7 +191,7 @@ curl "http://localhost:8000/v1/search?query=test&top_k=5" \
 
 2. Check Hermes logs for errors:
    ```bash
-   # Hermes logs usually go to stdout, check for "Capitok" messages
+   hermes logs --since 10m
    ```
 
 ### Search returns no results
@@ -200,8 +200,9 @@ curl "http://localhost:8000/v1/search?query=test&top_k=5" \
    - Check Capitok logs: `docker logs capitok-api-dev`
    - Query Capitok's `/v1/search` endpoint manually
 
-2. Check if search is using correct `user_id`:
-   - The plugin uses Hermes `user_id` from session context
+2. Check if search is using the expected `user_id` scope:
+   - In gateway/platform sessions, the plugin uses Hermes `user_id` from session context
+   - In CLI sessions, the plugin falls back to `cli:<session_id>`
    - Searches are scoped by user (not global)
 
 ## Architecture
@@ -209,7 +210,7 @@ curl "http://localhost:8000/v1/search?query=test&top_k=5" \
 ```
 Hermes Agent
     ↓
-turns → Capitok Plugin (on_turn_end hook)
+turns → Capitok Plugin (post_llm_call hook)
     ↓
 Capitok /v1/ingest
     ↓
@@ -222,7 +223,7 @@ Agent retrieves context when needed
 
 ## Performance
 
-- **Auto-save**: ~100ms background save (non-blocking)
+- **Auto-save**: one synchronous HTTP write after each successful turn
 - **Search**: environment-dependent baseline recall over derived records
 - **Network**: Works over any HTTP connection
 

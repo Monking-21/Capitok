@@ -160,9 +160,11 @@ bash scripts/install-hermes-plugin.sh
 然后验证：
 
 ```bash
-hermes doctor
+hermes plugins list
 curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
 ```
+
+当前插件会通过 Hermes 的 `post_llm_call` hook 自动保存已完成回合，并向 Hermes 暴露 `capitok_recall` 与 `capitok_save` 两个工具。
 
 安装器会把 `integrations/hermes` 复制到 Hermes 插件目录，并优先读取 shell 环境里的 Capitok 配置，然后回退到仓库里的 `.env` 或 `.env.dev`。
 如果需要，也可以先导出 `CAPITOK_API_URL`、`CAPITOK_API_KEY`、`CAPITOK_AUTO_SAVE` 或 `CAPITOK_TIMEOUT` 再运行。

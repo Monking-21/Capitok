@@ -20,7 +20,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import threading
 import time
 import urllib.error
 import urllib.parse
@@ -119,6 +118,7 @@ class CapitokClient:
 _client: Optional[CapitokClient] = None
 _config: Dict[str, Any] = {}
 _enabled = False
+TOOLSET_NAME = "plugin_capitok"
 
 
 def _load_config() -> Dict[str, Any]:
@@ -151,14 +151,22 @@ def _load_config() -> Dict[str, Any]:
 # Hook handlers
 # ---------------------------------------------------------------------------
 
-def on_turn_end(
+def _resolve_user_id(session_id: str, **kwargs) -> str:
+    """Return the best available user identifier for Capitok scoping."""
+    user_id = kwargs.get("user_id")
+    if user_id:
+        return str(user_id)
+    platform = str(kwargs.get("platform") or "cli")
+    return f"{platform}:{session_id}"
+
+
+def on_post_llm_call(
     session_id: str,
-    turn_number: int,
     user_message: str,
     assistant_response: str,
     **kwargs,
 ) -> None:
-    """Called after each turn completes. Auto-save to Capitok if enabled."""
+    """Called after each successful turn completes. Auto-save to Capitok if enabled."""
     global _client, _config, _enabled
 
     if not _enabled or not _client:
@@ -167,8 +175,7 @@ def on_turn_end(
     if not _config.get("auto_save", True):
         return
 
-    # Extract user_id from kwargs (set by Hermes during session init)
-    user_id = kwargs.get("user_id") or "unknown"
+    user_id = _resolve_user_id(session_id, **kwargs)
 
     # Set client IDs
     _client.set_ids(session_id, user_id)
@@ -176,29 +183,25 @@ def on_turn_end(
     # Prepare metadata
     metadata = {
         "agent": "hermes",
-        "turn": turn_number,
         "timestamp": time.time(),
+        "platform": kwargs.get("platform", ""),
+        "model": kwargs.get("model", ""),
     }
 
-    # Save in background thread to avoid blocking
-    def _save():
-        try:
-            result = _client.ingest(
-                user_input=user_message,
-                assistant_output=assistant_response,
-                metadata=metadata,
+    try:
+        result = _client.ingest(
+            user_input=user_message,
+            assistant_output=assistant_response,
+            metadata=metadata,
+        )
+        if result["status"] == "success":
+            logger.debug("Capitok ingest succeeded for session %s", session_id)
+        else:
+            logger.warning(
+                f"Capitok ingest failed: {result.get('message', 'unknown error')}"
             )
-            if result["status"] == "success":
-                logger.debug(f"Capitok ingest succeeded (turn {turn_number})")
-            else:
-                logger.warning(
-                    f"Capitok ingest failed: {result.get('message', 'unknown error')}"
-                )
-        except Exception as e:
-            logger.error(f"Capitok ingest error: {e}")
-
-    thread = threading.Thread(target=_save, daemon=True)
-    thread.start()
+    except Exception as e:
+        logger.error(f"Capitok ingest error: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -244,60 +247,70 @@ CAPITOK_SAVE_SCHEMA = {
 # Tool handler
 # ---------------------------------------------------------------------------
 
-def handle_tool_call(tool_name: str, args: dict, **kwargs) -> str:
-    """Route and handle tool calls from Hermes."""
+def _prepare_client_context(**kwargs) -> Optional[str]:
+    """Populate the Capitok client with session/user context from Hermes."""
     global _client, _config
 
     if not _client:
         return json.dumps({"error": "Capitok client not initialized"})
 
     # Extract IDs from kwargs
-    session_id = kwargs.get("session_id", "unknown")
-    user_id = kwargs.get("user_id", "unknown")
+    session_id = str(kwargs.get("session_id") or "unknown")
+    user_id = _resolve_user_id(session_id, **kwargs)
     _client.set_ids(session_id, user_id)
+    return None
 
-    if tool_name == "capitok_recall":
-        query = args.get("query", "")
-        top_k = int(args.get("top_k", 5))
 
-        if not query:
-            return json.dumps({"error": "query is required"})
+def handle_recall_tool(args: dict, **kwargs) -> str:
+    """Handle capitok_recall invocations from Hermes."""
+    context_error = _prepare_client_context(**kwargs)
+    if context_error:
+        return context_error
 
-        result = _client.search(query, top_k=top_k)
-        if result["status"] == "success":
-            items = result["result"].get("items", [])
-            if items:
-                recalled = "\n\n".join(
-                    [
-                        f"[{item['created_at']}] {item['text']}\n  score: {item['score']:.2f}"
-                        for item in items
-                    ]
-                )
-                return json.dumps({"status": "success", "memories": recalled})
-            else:
-                return json.dumps({"status": "success", "memories": "No memories found."})
-        else:
-            return json.dumps(
-                {"error": f"Search failed: {result.get('message', 'unknown')}"}
+    query = args.get("query", "")
+    top_k = int(args.get("top_k", 5))
+
+    if not query:
+        return json.dumps({"error": "query is required"})
+
+    result = _client.search(query, top_k=top_k)
+    if result["status"] == "success":
+        items = result["result"].get("items", [])
+        if items:
+            recalled = "\n\n".join(
+                [
+                    f"[{item['created_at']}] {item['text']}\n  score: {item['score']:.2f}"
+                    for item in items
+                ]
             )
-
-    elif tool_name == "capitok_save":
-        # Manual save (current turn data should come from Hermes context)
-        note = args.get("note", "")
-        user_msg = kwargs.get("user_message", "")
-        assistant_msg = kwargs.get("assistant_response", "")
-
-        metadata = {"agent": "hermes", "manual_save": True, "note": note}
-
-        result = _client.ingest(user_msg, assistant_msg, metadata=metadata)
-        if result["status"] == "success":
-            return json.dumps({"status": "success", "message": "Turn saved to Capitok."})
+            return json.dumps({"status": "success", "memories": recalled})
         else:
-            return json.dumps(
-                {"error": f"Save failed: {result.get('message', 'unknown')}"}
-            )
+            return json.dumps({"status": "success", "memories": "No memories found."})
+    else:
+        return json.dumps(
+            {"error": f"Search failed: {result.get('message', 'unknown')}"}
+        )
 
-    return json.dumps({"error": f"Unknown tool: {tool_name}"})
+
+def handle_save_tool(args: dict, **kwargs) -> str:
+    """Handle capitok_save invocations from Hermes."""
+    context_error = _prepare_client_context(**kwargs)
+    if context_error:
+        return context_error
+
+    note = args.get("note", "")
+    user_msg = kwargs.get("user_message", "")
+    assistant_msg = kwargs.get("assistant_response", "")
+
+    metadata = {"agent": "hermes", "manual_save": True, "note": note}
+
+    result = _client.ingest(user_msg, assistant_msg, metadata=metadata)
+    if result["status"] == "success":
+        return json.dumps({"status": "success", "message": "Turn saved to Capitok."})
+    else:
+        return json.dumps(
+            {"error": f"Save failed: {result.get('message', 'unknown')}"}
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -332,11 +345,21 @@ def register(ctx) -> None:
     _enabled = True
 
     # Register hook
-    ctx.register_hook("on_turn_end", on_turn_end)
+    ctx.register_hook("post_llm_call", on_post_llm_call)
 
     # Register tools
-    ctx.register_tool(CAPITOK_RECALL_SCHEMA, handler=handle_tool_call)
-    ctx.register_tool(CAPITOK_SAVE_SCHEMA, handler=handle_tool_call)
+    ctx.register_tool(
+        name=CAPITOK_RECALL_SCHEMA["name"],
+        toolset=TOOLSET_NAME,
+        schema=CAPITOK_RECALL_SCHEMA,
+        handler=handle_recall_tool,
+    )
+    ctx.register_tool(
+        name=CAPITOK_SAVE_SCHEMA["name"],
+        toolset=TOOLSET_NAME,
+        schema=CAPITOK_SAVE_SCHEMA,
+        handler=handle_save_tool,
+    )
 
     logger.info(
         f"Capitok plugin registered (auto_save={_config.get('auto_save', True)}, "

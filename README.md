@@ -160,9 +160,11 @@ bash scripts/install-hermes-plugin.sh
 Then verify it:
 
 ```bash
-hermes doctor
+hermes plugins list
 curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
 ```
+
+The plugin currently auto-saves completed turns via Hermes's `post_llm_call` hook and exposes `capitok_recall` and `capitok_save` as Hermes tools.
 
 The installer copies `integrations/hermes` into your Hermes plugin directory and reads Capitok settings from the shell environment first, then from the repo's `.env` or `.env.dev`.
 You can still override values by exporting `CAPITOK_API_URL`, `CAPITOK_API_KEY`, `CAPITOK_AUTO_SAVE`, or `CAPITOK_TIMEOUT` before running it.

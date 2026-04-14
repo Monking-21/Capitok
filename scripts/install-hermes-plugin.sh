@@ -169,6 +169,16 @@ elif [[ -f "$config_file" ]] && grep -qE '^plugins:[[:space:]]*$' "$config_file"
     }
   ' "$config_file" > "$tmp_file"
   mv "$tmp_file" "$config_file"
+elif [[ -f "$config_file" ]]; then
+  cp "$config_file" "$tmp_file"
+  if [[ -s "$tmp_file" ]]; then
+    printf '\n' >> "$tmp_file"
+  fi
+  {
+    printf 'plugins:\n'
+    cat "$block_file"
+  } >> "$tmp_file"
+  mv "$tmp_file" "$config_file"
 else
   {
     printf 'plugins:\n'
