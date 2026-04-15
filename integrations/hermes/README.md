@@ -1,61 +1,84 @@
 # Capitok Memory Plugin for Hermes
 
-Auto-saves every successful Hermes conversation turn to Capitok so the raw conversation can be archived, recovered, and reused later.
+Turn Hermes conversations into durable token assets.
 
-## Quick Install
+This plugin connects Hermes to Capitok so every completed turn can be archived, recovered, searched, and reused later. The goal is not to replace Hermes memory. The goal is to keep the raw conversation your agent already paid for.
 
-If you already cloned Capitok, install the plugin and sync Hermes config with one command:
+## Why Use It
 
-```bash
-bash scripts/install-hermes-plugin.sh
-```
+With the Capitok plugin, Hermes can:
 
-The installer copies `integrations/hermes` into your Hermes plugin directory and reads Capitok settings from the shell environment first, then from the repo's `.env` or `.env.dev`.
-If you want to override values manually, export `CAPITOK_API_URL`, `CAPITOK_API_KEY`, `CAPITOK_AUTO_SAVE`, or `CAPITOK_TIMEOUT` before running the script.
-
-## Positioning
-
-Capitok is best used here as a companion archive layer:
-
-- Preserve full Hermes turns outside the active context window
+- Auto-save completed turns outside the active context window
 - Keep conversation history portable across machines and runtime changes
-- Support later replay, re-indexing, or import into higher-level memory systems
-- Provide basic recall without trying to become the primary memory framework
+- Search archived recall records with `capitok_recall`
+- Explicitly save important context with `capitok_save`
 
-## Features
+If your Hermes session resets, your raw conversation archive still exists in Capitok.
 
-- **Auto-save**: Every successful turn is automatically saved to Capitok after the LLM finishes responding
-- **Baseline search**: Use `capitok_recall` tool to search past archived conversations
-- **Manual save**: Use `capitok_save` tool to emphasize important context
-- **Cross-machine**: Works with Capitok running on any accessible network address
-- **Lightweight**: Uses standard library only, no external dependencies
+## 1-Minute Setup
 
-## Installation
-
-### 1. One-command install
+If you already cloned Capitok, the fastest path is:
 
 ```bash
+hermes --version
 bash scripts/install-hermes-plugin.sh
 ```
 
-### 2. Configure Capitok endpoint manually
+The installer copies `integrations/hermes` into your Hermes plugin directory and reads settings from shell env first, then from the repo's `.env` or `.env.dev`.
 
-**Option A: Environment variables (recommended for servers)**
+Capitok currently recommends Hermes `0.9.0` or newer. The installer checks your Hermes version and prints a warning if:
+
+- Hermes is not installed or not in `PATH`
+- the installed Hermes version looks older than `0.9.0`
+- the installer cannot parse the Hermes version output
+
+Installation still continues in all of these cases, but the plugin may not be fully compatible and may not work correctly on that Hermes version.
+
+## Verify It Works
 
 ```bash
-export CAPITOK_API_URL=http://localhost:8000        # or http://192.168.x.x:8000
-export CAPITOK_API_KEY=dev-ingest-search-key        # from your Capitok .env
+hermes plugins list
+curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+```
+
+You should see:
+
+- the `capitok` plugin enabled in Hermes
+- a `200 OK` response from Capitok
+
+You can then query archived recall records directly:
+
+```bash
+curl "http://localhost:8000/v1/search?query=test&top_k=5" \
+  -H "X-API-Key: dev-ingest-search-key"
+```
+
+## What The Plugin Does
+
+- Auto-saves each successful Hermes turn through the `post_llm_call` hook
+- Registers `capitok_recall` for baseline recall
+- Registers `capitok_save` for explicit save actions
+- Works against any reachable Capitok endpoint over HTTP
+
+## Configuration
+
+### Recommended: use environment variables
+
+```bash
+export CAPITOK_API_URL=http://localhost:8000
+export CAPITOK_API_KEY=dev-ingest-search-key
 export CAPITOK_AUTO_SAVE=true
+export CAPITOK_TIMEOUT=5.0
 ```
 
 Then start Hermes:
+
 ```bash
 hermes
 ```
 
-**Option B: config.yaml (recommended for persistent config)**
+### Alternative: configure in `~/.hermes/config.yaml`
 
-Edit `~/.hermes/config.yaml`:
 ```yaml
 plugins:
   capitok:
@@ -66,178 +89,100 @@ plugins:
     timeout: 5.0
 ```
 
-**Option C: Interactive setup**
+If you use the installer, it usually writes this block for you.
 
-```bash
-hermes plugins  # Navigate to Capitok plugin and configure
-```
+## Common Use Cases
 
-If you use the installer, it will write the Capitok block for you, so you usually do not need to edit `config.yaml` manually.
+### Automatic archive
 
-## Configuration
+Every successful turn is automatically saved after Hermes finishes responding.
 
-| Key | Default | Description | Required |
-|-----|---------|-------------|----------|
-| `api_url` | `http://localhost:8000` | Capitok API endpoint | ✓ |
-| `api_key` | - | Authentication key (from Capitok `.env`) | ✓ |
-| `auto_save` | `true` | Auto-save each successful turn | |
-| `timeout` | `5.0` | HTTP request timeout in seconds | |
+### Search old context
 
-## Usage
-
-### Automatic saving (always on if configured)
-
-Every successful turn is automatically saved:
-```
-User: "What are my project deadlines?"
-Hermes: "Based on your memories, you have..."
-[Capitok plugin saves this turn after the response completes]
-```
-
-### Search memories with `capitok_recall`
-
-In conversation:
-```
+```text
 /capitok_recall query="topics about AI safety" top_k=5
 ```
 
-Or let Hermes use it autonomously:
-```
-User: "Remind me what we discussed about security last month"
-Hermes: [uses capitok_recall to search] "We discussed..."
-```
+Hermes can also call this tool when it needs prior context.
 
-### Manual save with `capitok_save`
+### Manually save important context
 
-```
+```text
 /capitok_save note="Important: client wants quarterly reviews"
 ```
 
-Or Hermes can use it:
-```
-User: "Remember this: we need to increase the budget by 20%"
-Hermes: [uses capitok_save to emphasize] "Saved that important update"
-```
+## Cross-Machine Setup
 
-## Cross-machine setup
+Run Capitok on one machine:
 
-**Capitok on server A (192.168.1.100):**
 ```bash
-# In /home/user/Capitok
-docker compose up  # Runs on port 8000
+docker compose up
 ```
 
-**Hermes on server B:**
+Then point Hermes on another machine to that endpoint:
+
 ```bash
 export CAPITOK_API_URL=http://192.168.1.100:8000
 export CAPITOK_API_KEY=dev-ingest-search-key
 hermes
 ```
 
-## Verify working
+## Config Keys
 
-### Check plugin is loaded
-
-```bash
-hermes plugins list
-# Look for:
-# capitok   enabled
-```
-
-### Manual test of connection
-
-```bash
-# From Hermes server
-curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
-# Should return: 200 OK
-```
-
-### Check saved memories
-
-```bash
-# Query Capitok directly
-curl "http://localhost:8000/v1/search?query=test&top_k=5" \
-  -H "X-API-Key: dev-ingest-search-key"
-```
+| Key | Default | Description | Required |
+|-----|---------|-------------|----------|
+| `api_url` | `http://localhost:8000` | Capitok API endpoint | ✓ |
+| `api_key` | - | Authentication key | ✓ |
+| `auto_save` | `true` | Auto-save each successful turn | |
+| `timeout` | `5.0` | HTTP timeout in seconds | |
 
 ## Troubleshooting
 
 ### Plugin not loading
 
-1. Check if Capitok API is reachable:
-   ```bash
-   curl http://localhost:8000/health
-   ```
-
-2. Check if `CAPITOK_API_KEY` is set:
-   ```bash
-   echo $CAPITOK_API_KEY
-   ```
-
-3. Check Hermes logs:
-   ```bash
-   hermes logs --since 10m
-   ```
+```bash
+hermes plugins list
+echo $CAPITOK_API_KEY
+curl http://localhost:8000/health
+```
 
 ### Turns not being saved
 
-1. Check if `auto_save` is enabled:
-   ```yaml
-   # In ~/.hermes/config.yaml
-   plugins:
-     capitok:
-       auto_save: true  # Should be true
-   ```
+```bash
+hermes logs --since 10m
+```
 
-2. Check Hermes logs for errors:
-   ```bash
-   hermes logs --since 10m
-   ```
+Check that `auto_save` is enabled and Capitok is reachable.
 
 ### Search returns no results
 
-1. Verify data was ingested:
-   - Check Capitok logs: `docker logs capitok-api-dev`
-   - Query Capitok's `/v1/search` endpoint manually
+- Confirm data was ingested into Capitok
+- Query `/v1/search` directly
+- Check whether Hermes is searching under the expected user scope
 
-2. Check if search is using the expected `user_id` scope:
-   - In gateway/platform sessions, the plugin uses Hermes `user_id` from session context
-   - In CLI sessions, the plugin falls back to `cli:<session_id>`
-   - Searches are scoped by user (not global)
-
-## Architecture
-
-```
-Hermes Agent
-    ↓
-turns → Capitok Plugin (post_llm_call hook)
-    ↓
-Capitok /v1/ingest
-    ↓
-PostgreSQL (raw_chat_logs, refined_memories)
-    ↓
-Hermes tools: capitok_recall, capitok_save
-    ↓
-Agent retrieves context when needed
-```
-
-## Performance
-
-- **Auto-save**: one synchronous HTTP write after each successful turn
-- **Search**: environment-dependent baseline recall over derived records
-- **Network**: Works over any HTTP connection
-
-Capitok is designed for long-term durability and recovery of conversation assets, not for taking over the primary memory framework role in real-time reasoning.
+In gateway or platform sessions, the plugin uses Hermes `user_id` from session context. In CLI sessions, it falls back to `cli:<session_id>`.
 
 ## Security
 
-- All API calls use `X-API-Key` header authentication
-- API keys should be stored in env vars or secure config, never in code
-- In production, use TLS/HTTPS for Capitok endpoint:
-  ```bash
-  export CAPITOK_API_URL=https://capitok.example.com
-  ```
+- All API calls use `X-API-Key`
+- Store API keys in env vars or secure config, not in code
+- Use HTTPS in production
+
+Example:
+
+```bash
+export CAPITOK_API_URL=https://capitok.example.com
+```
+
+## Positioning
+
+Capitok is best used here as a companion archive layer:
+
+- Keep full Hermes turns as durable records
+- Preserve raw conversation history before summarization or loss
+- Support later replay, re-indexing, migration, and recovery
+- Provide basic recall without trying to become the primary live memory framework
 
 ## License
 
-Same as Capitok project (see Capitok's LICENSE file).
+Same as the Capitok project.

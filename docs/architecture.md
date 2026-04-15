@@ -2,8 +2,10 @@
 
 This document describes the technical design goals, architecture, storage model, and operational strategy for Capitok.
 
-Capitok is positioned as a raw conversation archive and recovery substrate for agent systems.
-It complements upstream memory frameworks by preserving source conversations so they can be replayed, re-indexed, or reconstructed later.
+Capitok comes from `capitalize your token`: turn the context and token cost your agents have already spent into durable, portable, recoverable assets.
+
+Architecturally, Capitok is positioned as a raw conversation archive and recovery substrate for agent systems.
+It preserves source conversations as the durable master record so they can later be replayed, re-indexed, migrated across frameworks, or used to rebuild higher-level memory systems instead of trying to replace those systems directly.
 
 ## Design Principles (Avoid Over-Engineering)
 
@@ -31,8 +33,8 @@ Capitok uses a boundary-first and implementation-later strategy:
 
 ## Design Goals
 
-- Preserve raw agent conversations as durable assets
-- Keep migration and recovery cost low through an independent archive layer
+- Preserve raw agent conversations as durable assets rather than disposable context
+- Keep migration, recovery, and reconstruction cost low through an independent archive layer
 - Make replay, re-indexing, and downstream memory reconstruction possible
 - Provide baseline retrieval without positioning itself as the primary memory framework
 

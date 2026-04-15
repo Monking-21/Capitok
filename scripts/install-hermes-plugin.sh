@@ -10,6 +10,50 @@ api_url="${CAPITOK_API_URL:-}"
 api_key="${CAPITOK_API_KEY:-}"
 auto_save="${CAPITOK_AUTO_SAVE:-}"
 timeout="${CAPITOK_TIMEOUT:-}"
+recommended_hermes_version="${CAPITOK_RECOMMENDED_HERMES_VERSION:-0.9.0}"
+
+warn() {
+  echo "Warning: $*" >&2
+}
+
+version_lt() {
+  local left="$1"
+  local right="$2"
+  local first
+
+  first="$(printf '%s\n%s\n' "$left" "$right" | sort -V | head -n1)"
+  [[ "$first" == "$left" && "$left" != "$right" ]]
+}
+
+detect_hermes_version() {
+  local output
+
+  if ! command -v hermes >/dev/null 2>&1; then
+    warn "Hermes CLI was not found in PATH. Capitok installed the plugin files, but cannot verify Hermes compatibility."
+    warn "If the plugin does not load or behave correctly, check your Hermes installation first."
+    return 0
+  fi
+
+  if ! output="$(hermes --version 2>/dev/null)"; then
+    if ! output="$(hermes version 2>/dev/null)"; then
+      warn "Hermes is installed, but its version could not be detected automatically."
+      warn "The plugin was still installed. If it does not work correctly, your Hermes version may be incompatible."
+      return 0
+    fi
+  fi
+
+  if [[ "$output" =~ v([0-9]+(\.[0-9]+)+) ]]; then
+    hermes_version="${BASH_REMATCH[1]}"
+    if version_lt "$hermes_version" "$recommended_hermes_version"; then
+      warn "Detected Hermes $hermes_version. Capitok currently recommends Hermes $recommended_hermes_version or newer."
+      warn "Installation will continue, but this Hermes version may not be fully compatible and the plugin may not work correctly."
+    fi
+  else
+    warn "Hermes version output was detected but could not be parsed:"
+    warn "$output"
+    warn "Installation will continue, but plugin compatibility could not be verified."
+  fi
+}
 
 read_env_value() {
   local key="$1"
@@ -76,6 +120,7 @@ Usage:
 Optional environment variables:
   CAPITOK_HERMES_PLUGIN_DIR   Override Hermes plugin directory
   CAPITOK_HERMES_CONFIG_FILE  Override Hermes config file path
+  CAPITOK_RECOMMENDED_HERMES_VERSION  Recommended Hermes version for warning checks
   CAPITOK_AUTO_SAVE           true/false, defaults to true
   CAPITOK_TIMEOUT             Request timeout in seconds, defaults to 5.0
 
@@ -84,6 +129,8 @@ It reads CAPITOK_API_URL, CAPITOK_API_KEY, CAPITOK_AUTO_SAVE, and CAPITOK_TIMEOU
 from the shell environment first, then falls back to the repo's .env or .env.dev.
 If CAPITOK_API_KEY is available, it also writes or updates a Capitok plugin block
 in the Hermes config file.
+If Hermes is missing, too old, or its version cannot be detected, the script only
+prints a warning and continues.
 EOF
 }
 
@@ -96,6 +143,8 @@ if [[ ! -d "$source_dir" ]]; then
   echo "Capitok Hermes plugin source not found: $source_dir" >&2
   exit 1
 fi
+
+detect_hermes_version
 
 mkdir -p "$(dirname "$plugin_dir")"
 rm -rf "$plugin_dir"

@@ -1,42 +1,155 @@
 # Capitok（中文说明）
 
-Capitok 是一个面向 AI Agent 的开源原始对话归档与恢复层。
-它的设计目标是补充主流 memory 框架，而不是替代它们。
+Capitok 的核心意思是：`capitalize your token`。
 
-先归档，再重建。
-Capitok 保存的是 Agent 已经付出 token 成本得到的对话资产，让它们在上下文清空、设备迁移、框架切换之后仍然可以被恢复和再利用。
+也就是把 Agent 已经花掉的上下文和 token 成本，沉淀成可长期保存、可迁移、可恢复、可复用的资产。
+
+Capitok 是一个面向 AI Agent 的开源原始对话归档与恢复层。它会在对话从上下文窗口中滑出之前，先把完整交互记录保存下来，方便你之后回放、重建索引、迁移框架，或者在新的记忆系统里继续使用。
+
+## Capitok 是做什么的
+
+- 归档 Agent 的原始对话，避免历史直接丢失
+- 把已经消耗的 token 成本转成可复用的对话资产
+- 为未来的回放、重建索引、重建记忆提供恢复底座
+- 作为上层 memory 框架的补充，而不是替代品
+
+## 为什么值得做
+
+很多 Agent 系统已经花了大量 token 生成有价值的对话，但这些内容往往只存在于某个上下文窗口、某个运行时，或者某个特定框架里。
+
+Capitok 的核心思路是把这些已消耗的 token 当成资产：
+
+- 保留原始对话，而不只是摘要
+- 跨上下文重置、设备切换、框架迁移继续可用
+- 为后续记忆管线保留原始母带
+- 先有归档，再在归档之上做检索和重建
+
+## 快速开始
+
+### 1. 本地启动 Capitok
+
+```bash
+git clone https://github.com/Monking-21/Capitok.git
+cd Capitok
+cp .env.example .env
+docker compose up --build
+```
+
+### 2. 验证服务是否启动
+
+```bash
+curl http://localhost:8000/health
+```
+
+### 3. 写入一条交互
+
+```bash
+curl -X POST "http://localhost:8000/v1/ingest" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: replace-with-prod-key" \
+  -d '{
+    "session_id": "s-001",
+    "user_id": "u-001",
+    "source": "agent",
+    "input": "I like Tushare API",
+    "output": "Noted, preference stored.",
+    "metadata": {"agent": "OpenClaw"}
+  }'
+```
+
+### 4. 检索已归档内容
+
+```bash
+curl "http://localhost:8000/v1/search?query=Tushare&top_k=5" \
+  -H "X-API-Key: replace-with-prod-key"
+```
+
+如果是本地开发，也可以直接使用仓库里的开发编排：
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+这个模式默认读取 `.env.dev`，可直接使用本地测试 key `dev-ingest-search-key`。
+
+## 接入方式
+
+### Hermes 接入
+
+如果你已经在使用 Hermes，最快的接入方式是：
+
+```bash
+hermes --version
+bash scripts/install-hermes-plugin.sh
+```
+
+然后验证：
+
+```bash
+hermes plugins list
+curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+```
+
+当前 Hermes 插件会：
+
+- 通过 `post_llm_call` hook 自动保存已完成回合
+- 提供 `capitok_recall` 作为基础 recall 工具
+- 提供 `capitok_save` 作为显式保存工具
+
+安装器会把 `integrations/hermes` 复制到 Hermes 插件目录，并优先读取 shell 环境变量，其次读取 `.env` 或 `.env.dev`。
+Capitok 当前建议使用 Hermes `0.9.0` 及以上版本。若 Hermes 未安装、版本偏旧，或安装器无法识别版本号，安装器会给出 warning，但不会阻断安装。
+
+如需覆盖配置，可先导出：
+
+- `CAPITOK_API_URL`
+- `CAPITOK_API_KEY`
+- `CAPITOK_AUTO_SAVE`
+- `CAPITOK_TIMEOUT`
+
+完整说明见：[integrations/hermes/README.md](integrations/hermes/README.md)
+
+### 直接接入 API
+
+如果你在构建自己的 Agent runtime，可以直接对接 Capitok 的 HTTP API：
+
+- `POST /v1/ingest`：归档原始交互
+- `GET /v1/search`：查询派生 recall 记录
+- `GET /health`：健康检查
+
+鉴权方式为 `X-API-Key` 请求头。租户与主体身份由服务端根据 API key 映射解析，不由请求体直接声明。
+
+## 适合谁使用
+
+- 希望保留完整对话资产的 Agent 开发者
+- 需要独立恢复层的 Agent 基础设施团队
+- 想先把原始数据留住，再逐步建设上层 memory 系统的团队
 
 ## 项目定位
 
-Capitok 把已经消耗掉的上下文和 token 视为长期资产：
+Capitok 不是一个“主实时语义记忆框架”。
 
-- 在上下文窗口滑出之前，先把 Agent 原始对话持久化
-- 在设备迁移、运行时切换、框架替换时保留独立归档
-- 为未来回放、重建索引、重建上层记忆提供母带数据
-- 作为 Mem0 等工具之下的归档与恢复层，与上层记忆工作流协同
+它更适合被理解为：
 
-## 项目状态
+- 一个原始数据优先的归档层
+- 一个面向未来回放与重建的恢复底座
+- 一个连接 Agent runtime 与存储资产的中间层
+- 一个可供上层 memory 工作流继续扩展的基础设施层
 
-- 阶段：MVP 骨架开发中
-- 代码实现：已提供 FastAPI 网关与数据库 schema 初版
-- 目标用户：Agent 开发者与基础设施工程师
+## 当前 MVP 能力
 
-## 项目亮点
+当前 MVP 已支持：
 
-- 原始数据优先策略，保障长期可恢复
-- 归档优先设计，便于回放、导出与迁移
-- Agent 运行时与对话资产存储解耦
-- 检索能力作为派生辅助层，而不是项目主目标
-- 容器化优先，便于迁移与恢复
+1. API Key 鉴权与租户/主体映射
+2. 原始聊天日志持久化
+3. 进程内异步派生文本写入链路
+4. 基于 tenant 与 principal 作用域的基础检索
+5. 以 Alembic migration 作为主 schema 管理方式
+6. 从数据库自动导出 schema 快照
+7. 默认使用 `uv` 作为依赖管理与命令执行工具
+8. 双 compose 模型：默认生产编排加独立 dev/test 配置
 
-## 文档目录
-
-- 架构设计（英文）：[docs/architecture.md](docs/architecture.md)
-- 架构设计（中文）：[docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)
-- 实施进展与计划（英文）：[docs/implementation-status.md](docs/implementation-status.md)
-- 实施进展与计划（中文）：[docs/implementation-status.zh-CN.md](docs/implementation-status.zh-CN.md)
-- Hermes 接入指南：[integrations/hermes/README.md](integrations/hermes/README.md)
-- 英文 README（默认）：[README.md](README.md)
+当前 MVP 并不以“完整语义记忆框架”为目标。  
+`refined_memories` 更适合被理解为原始归档之上的派生层，用于基础 recall 和未来重建流程。
 
 ## 仓库结构
 
@@ -79,113 +192,16 @@ Capitok 把已经消耗掉的上下文和 token 视为长期资产：
     └── implementation-status.zh-CN.md
 ```
 
-## 快速开始
+## 文档目录
 
-### 生产环境（默认）
+- 架构设计（英文）：[docs/architecture.md](docs/architecture.md)
+- 架构设计（中文）：[docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)
+- 实施进展与计划（英文）：[docs/implementation-status.md](docs/implementation-status.md)
+- 实施进展与计划（中文）：[docs/implementation-status.zh-CN.md](docs/implementation-status.zh-CN.md)
+- Hermes 接入指南：[integrations/hermes/README.md](integrations/hermes/README.md)
+- 英文 README（默认）：[README.md](README.md)
 
-1. 克隆仓库并进入项目目录：
-
-```bash
-git clone https://github.com/Monking-21/Capitok.git
-cd Capitok
-```
-
-2. 安装 uv：
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-3. 准备环境变量：
-
-```bash
-cp .env.example .env
-```
-
-4. 使用默认 compose 启动生产导向编排：
-
-```bash
-docker compose up --build
-```
-
-### 开发与测试环境
-
-1. 使用独立 dev/test compose 文件：
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-该模式默认使用仓库内的 `.env.dev` 文件。
-
-### 基础验证
-
-1. 健康检查：
-
-```bash
-curl http://localhost:8000/health
-```
-
-2. 写入示例：
-
-```bash
-curl -X POST "http://localhost:8000/v1/ingest" \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: dev-ingest-search-key" \
-    -d '{
-        "session_id": "s-001",
-        "user_id": "u-001",
-        "source": "openclaw",
-        "input": "I like Tushare API",
-        "output": "Noted, preference stored.",
-        "metadata": {"agent": "OpenClaw"}
-    }'
-```
-
-3. 检索示例：
-
-```bash
-curl "http://localhost:8000/v1/search?query=Tushare&top_k=5" \
-    -H "X-API-Key: dev-ingest-search-key"
-```
-
-### Hermes 接入
-
-一条命令完成 Hermes 插件安装和配置：
-
-```bash
-bash scripts/install-hermes-plugin.sh
-```
-
-然后验证：
-
-```bash
-hermes plugins list
-curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
-```
-
-当前插件会通过 Hermes 的 `post_llm_call` hook 自动保存已完成回合，并向 Hermes 暴露 `capitok_recall` 与 `capitok_save` 两个工具。
-
-安装器会把 `integrations/hermes` 复制到 Hermes 插件目录，并优先读取 shell 环境里的 Capitok 配置，然后回退到仓库里的 `.env` 或 `.env.dev`。
-如果需要，也可以先导出 `CAPITOK_API_URL`、`CAPITOK_API_KEY`、`CAPITOK_AUTO_SAVE` 或 `CAPITOK_TIMEOUT` 再运行。
-
-当前 MVP 已支持：
-
-1. API Key 鉴权与租户/主体映射
-2. 原始日志入库
-3. 进程内异步派生文本写入链路
-4. 按 tenant 和 principal 作用域的基础检索
-5. 以 Alembic migration 作为主数据库组织方式
-6. 支持从数据库自动导出 schema 快照
-7. 默认使用 uv 进行依赖管理与命令执行
-8. 双 compose 模型：默认生产 + 开发测试独立文件
-
-当前 MVP 并不以“完整语义记忆框架”为目标。
-`refined_memories` 更适合被理解为原始归档之上的派生层，用于基础 recall 和未来重建流程。
-
-完整的 Hermes 插件说明仍然保留在 [integrations/hermes/README.md](integrations/hermes/README.md)。
-
-schema 快照流程：
+## Schema 工作流
 
 1. 先执行 migration。
 2. 运行 `./scripts/dump-schema.sh` 刷新 `sql/schema.sql`。
@@ -194,9 +210,9 @@ schema 快照流程：
 
 1. 冻结 MVP 架构
 2. 发布 API 与 schema 规范
-3. 接入持久化队列后端（Redis Streams 或 RabbitMQ）
+3. 接入持久化队列后端，如 Redis Streams 或 RabbitMQ
 4. 完善可观测性与可靠性
-5. 社区反馈迭代
+5. 根据社区反馈持续迭代
 
 ## 贡献说明
 
@@ -206,7 +222,7 @@ schema 快照流程：
 
 1. API 设计评审
 2. 存储 schema 优化
-3. 性能压测脚本
+3. 压测与 benchmark 脚本
 4. 可靠性与安全增强
 
 ## 许可证
