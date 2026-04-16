@@ -8,3 +8,9 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.ai/
+AGENTS.md
+CLAUDE.md
+.github/copilot-instructions.md
+docs/ai-shared.md
+docs/superpowers/

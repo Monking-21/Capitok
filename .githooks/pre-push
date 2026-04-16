@@ -1,0 +1,58 @@
+#!/bin/sh
+set -u
+
+warn() {
+  printf '%s\n' "capitok private-ai workspace: $*" >&2
+}
+
+resolve_private_repo() {
+  private_repo=${CAPITOK_PRIVATE_AI_REPO:-}
+  if [ -z "$private_repo" ]; then
+    return 1
+  fi
+
+  case "$private_repo" in
+    "~")
+      private_repo=$HOME
+      ;;
+    "~/"*)
+      private_repo=$HOME/${private_repo#~/}
+      ;;
+  esac
+
+  printf '%s\n' "$private_repo"
+}
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [ -z "$repo_root" ]; then
+  warn "could not resolve public repo root; skipping private status check"
+  exit 0
+fi
+
+private_repo=$(resolve_private_repo 2>/dev/null || true)
+if [ -z "$private_repo" ]; then
+  warn "CAPITOK_PRIVATE_AI_REPO is unset; skipping private status check"
+  exit 0
+fi
+
+if [ ! -d "$private_repo" ]; then
+  warn "private AI repo not found: $private_repo"
+  exit 0
+fi
+
+status_script="$private_repo/tools/status.py"
+if [ ! -f "$status_script" ]; then
+  warn "missing private status tool: $status_script"
+  exit 0
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  warn "python3 is unavailable; skipping private status check"
+  exit 0
+fi
+
+if ! CAPITOK_PUBLIC_REPO="$repo_root" CAPITOK_PUBLIC_HOOK="pre-push" python3 "$status_script"; then
+  warn "private status check failed; push continues"
+fi
+
+exit 0
