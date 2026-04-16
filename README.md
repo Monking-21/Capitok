@@ -72,6 +72,25 @@ docker compose -f docker-compose.dev.yml up --build
 
 That profile uses `.env.dev` and includes the local testing key `dev-ingest-search-key`.
 
+## CLI
+
+Capitok also provides a thin session-first CLI for source-checkout workflows:
+
+```bash
+uv run capitok health
+uv run capitok sessions list
+uv run capitok sessions show <session_id> --source codex
+uv run capitok search "quarterly review"
+uv run capitok codex enable
+uv run capitok hermes enable
+```
+
+The CLI reuses the same repo-local config resolution as the Codex integration:
+
+- explicit `CAPITOK_API_URL` / `CAPITOK_API_KEY`
+- otherwise `.env`
+- otherwise `.env.dev`
+
 ## Integration
 
 ### Hermes integration
@@ -108,12 +127,22 @@ You can override these before installation:
 
 Full guide: [integrations/hermes/README.md](integrations/hermes/README.md)
 
+### Codex integration
+
+If you use Codex hooks, Capitok can archive supported hook events for later recovery without replacing Codex's own memory behavior.
+Installing the Codex integration replaces any existing handlers for Capitok's supported Codex events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, and `Stop`.
+Install with `bash scripts/install-codex-hook.sh`.
+
+Full guide: [integrations/codex/README.md](integrations/codex/README.md)
+
 ### Direct API integration
 
 If you are building your own agent runtime, point your application to Capitok's HTTP API:
 
 - `POST /v1/ingest` to archive raw interactions
 - `GET /v1/search` to retrieve derived recall records
+- `GET /v1/sessions` to list recent archived sessions or raw records
+- `GET /v1/sessions/{session_id}` to inspect one archived session timeline
 - `GET /health` for service checks
 
 Authentication uses the `X-API-Key` header. Tenant and principal identity are derived server-side from the API key mapping.
@@ -199,6 +228,7 @@ The searchable `refined_memories` table is a derived layer intended to support r
 - Implementation Status and Plan (English): [docs/implementation-status.md](docs/implementation-status.md)
 - 实施进展与下一步计划（中文）: [docs/implementation-status.zh-CN.md](docs/implementation-status.zh-CN.md)
 - Hermes integration guide: [integrations/hermes/README.md](integrations/hermes/README.md)
+- Codex integration guide: [integrations/codex/README.md](integrations/codex/README.md)
 - Chinese README: [README.zh-CN.md](README.zh-CN.md)
 
 ## Schema Workflow

@@ -1,0 +1,1 @@
+"""Capitok Codex hooks integration."""

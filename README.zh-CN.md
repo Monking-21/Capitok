@@ -72,6 +72,25 @@ docker compose -f docker-compose.dev.yml up --build
 
 这个模式默认读取 `.env.dev`，可直接使用本地测试 key `dev-ingest-search-key`。
 
+## CLI
+
+Capitok 现在还提供一个轻量、session-first 的 CLI，适合直接在源码仓库里使用：
+
+```bash
+uv run capitok health
+uv run capitok sessions list
+uv run capitok sessions show <session_id> --source codex
+uv run capitok search "quarterly review"
+uv run capitok codex enable
+uv run capitok hermes enable
+```
+
+CLI 复用和 Codex 集成相同的本地配置解析顺序：
+
+- 显式导出的 `CAPITOK_API_URL` / `CAPITOK_API_KEY`
+- 否则读取 `.env`
+- 否则读取 `.env.dev`
+
 ## 接入方式
 
 ### Hermes 接入
@@ -108,12 +127,22 @@ Capitok 当前建议使用 Hermes `0.9.0` 及以上版本。若 Hermes 未安装
 
 完整说明见：[integrations/hermes/README.md](integrations/hermes/README.md)
 
+### Codex 接入
+
+如果你使用 Codex hooks，Capitok 可以归档支持的 hook 事件，方便后续恢复，但不会替代 Codex 自己的记忆行为。
+安装 Codex 接入时，会接管 Capitok 支持的这些 Codex 事件槽位：`SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PostToolUse` 和 `Stop`；如果这些事件已配置其他 handler，安装器会直接覆盖它们。
+安装命令为 `bash scripts/install-codex-hook.sh`。
+
+完整说明见：[integrations/codex/README.md](integrations/codex/README.md)
+
 ### 直接接入 API
 
 如果你在构建自己的 Agent runtime，可以直接对接 Capitok 的 HTTP API：
 
 - `POST /v1/ingest`：归档原始交互
 - `GET /v1/search`：查询派生 recall 记录
+- `GET /v1/sessions`：列出最近归档的会话或原始记录
+- `GET /v1/sessions/{session_id}`：查看某个会话的时间线
 - `GET /health`：健康检查
 
 鉴权方式为 `X-API-Key` 请求头。租户与主体身份由服务端根据 API key 映射解析，不由请求体直接声明。
@@ -199,6 +228,7 @@ Capitok 不是一个“主实时语义记忆框架”。
 - 实施进展与计划（英文）：[docs/implementation-status.md](docs/implementation-status.md)
 - 实施进展与计划（中文）：[docs/implementation-status.zh-CN.md](docs/implementation-status.zh-CN.md)
 - Hermes 接入指南：[integrations/hermes/README.md](integrations/hermes/README.md)
+- Codex 接入指南：[integrations/codex/README.md](integrations/codex/README.md)
 - 英文 README（默认）：[README.md](README.md)
 
 ## Schema 工作流
