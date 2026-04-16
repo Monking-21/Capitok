@@ -80,13 +80,11 @@ assert extract_transcript_path(transcript_event) == "/tmp/codex-session-3.jsonl"
 
 with TemporaryDirectory() as tmpdir:
     transcript_path = Path(tmpdir) / "session.jsonl"
-    raw_transcript_jsonl = "\n".join(
-        [
-            '{"type":"message","text":"hello"}',
-            '{"type":"message","text":"world"}',
-        ]
-    ) + "\n"
-    transcript_path.write_text(raw_transcript_jsonl, encoding="utf-8")
+    raw_transcript_jsonl = (
+        '{"type":"message","text":"hello"}\r\n'
+        '{"type":"message","text":"world"}\r\n'
+    )
+    transcript_path.write_bytes(raw_transcript_jsonl.encode("utf-8"))
 
     payload = build_transcript_snapshot_payload("codex-session-3", "user-3", transcript_path)
     expected_bytes = raw_transcript_jsonl.encode("utf-8")
@@ -103,4 +101,15 @@ with TemporaryDirectory() as tmpdir:
     assert payload["metadata"]["transcript_bytes"] == len(expected_bytes)
     assert payload["metadata"]["transcript_line_count"] == 2
     assert payload["metadata"]["raw_transcript_jsonl"] == raw_transcript_jsonl
+
+with TemporaryDirectory() as tmpdir:
+    transcript_path = Path(tmpdir) / "session-crlf.jsonl"
+    crlf_transcript_bytes = b'{"type":"message","text":"one"}\r\n{"type":"message","text":"two"}\r\n'
+    transcript_path.write_bytes(crlf_transcript_bytes)
+
+    payload = build_transcript_snapshot_payload("codex-session-4", "user-4", transcript_path)
+
+    assert payload["metadata"]["transcript_sha256"] == hashlib.sha256(crlf_transcript_bytes).hexdigest()
+    assert payload["metadata"]["transcript_bytes"] == len(crlf_transcript_bytes)
+    assert payload["metadata"]["raw_transcript_jsonl"] == crlf_transcript_bytes.decode("utf-8")
 PY

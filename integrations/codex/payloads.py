@@ -63,8 +63,8 @@ def build_transcript_snapshot_payload(
     transcript_path: str | Path,
 ) -> dict[str, Any]:
     transcript_path = Path(transcript_path)
-    raw_transcript_jsonl = transcript_path.read_text(encoding="utf-8")
-    transcript_bytes = raw_transcript_jsonl.encode("utf-8")
+    transcript_bytes = transcript_path.read_bytes()
+    raw_transcript_jsonl = transcript_bytes.decode("utf-8")
 
     return {
         "session_id": session_id,
