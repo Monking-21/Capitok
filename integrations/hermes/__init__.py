@@ -11,7 +11,7 @@ Or in config.yaml:
     capitok:
       enabled: true
       api_url: http://localhost:8000
-      api_key: dev-ingest-search-key
+      api_key: your-dev-api-key
       auto_save: true
 """
 

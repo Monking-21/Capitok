@@ -38,7 +38,7 @@ Installation still continues in all of these cases, but the plugin may not be fu
 
 ```bash
 hermes plugins list
-curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+curl -i http://localhost:8000/health -H "X-API-Key: your-dev-api-key"
 ```
 
 You should see:
@@ -50,7 +50,7 @@ You can then query archived recall records directly:
 
 ```bash
 curl "http://localhost:8000/v1/search?query=test&top_k=5" \
-  -H "X-API-Key: dev-ingest-search-key"
+  -H "X-API-Key: your-dev-api-key"
 ```
 
 ## What The Plugin Does
@@ -66,7 +66,7 @@ curl "http://localhost:8000/v1/search?query=test&top_k=5" \
 
 ```bash
 export CAPITOK_API_URL=http://localhost:8000
-export CAPITOK_API_KEY=dev-ingest-search-key
+export CAPITOK_API_KEY=your-dev-api-key
 export CAPITOK_AUTO_SAVE=true
 export CAPITOK_TIMEOUT=5.0
 ```
@@ -84,7 +84,7 @@ plugins:
   capitok:
     enabled: true
     api_url: http://localhost:8000
-    api_key: dev-ingest-search-key
+    api_key: your-dev-api-key
     auto_save: true
     timeout: 5.0
 ```
@@ -123,7 +123,7 @@ Then point Hermes on another machine to that endpoint:
 
 ```bash
 export CAPITOK_API_URL=http://192.168.1.100:8000
-export CAPITOK_API_KEY=dev-ingest-search-key
+export CAPITOK_API_KEY=your-dev-api-key
 hermes
 ```
 

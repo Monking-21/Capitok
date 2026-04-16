@@ -70,7 +70,7 @@ curl "http://localhost:8000/v1/search?query=Tushare&top_k=5" \
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-这个模式默认读取 `.env.dev`，可直接使用本地测试 key `dev-ingest-search-key`。
+这个模式默认读取 `.env.dev`。执行本地验证命令时，请使用你在该文件里配置的 API key。
 
 ## CLI
 
@@ -106,7 +106,7 @@ bash scripts/install-hermes-plugin.sh
 
 ```bash
 hermes plugins list
-curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+curl -i http://localhost:8000/health -H "X-API-Key: your-dev-api-key"
 ```
 
 当前 Hermes 插件会：

@@ -70,7 +70,7 @@ For local development, you can also use the committed dev profile:
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-That profile uses `.env.dev` and includes the local testing key `dev-ingest-search-key`.
+That profile uses `.env.dev`. Use the API key configured there when running local verification commands.
 
 ## CLI
 
@@ -106,7 +106,7 @@ Then verify:
 
 ```bash
 hermes plugins list
-curl -i http://localhost:8000/health -H "X-API-Key: dev-ingest-search-key"
+curl -i http://localhost:8000/health -H "X-API-Key: your-dev-api-key"
 ```
 
 The Hermes plugin currently:
