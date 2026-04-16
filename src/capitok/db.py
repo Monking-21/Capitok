@@ -108,6 +108,33 @@ def search_refined_memories(
             return list(cur.fetchall())
 
 
+def transcript_snapshot_exists(
+    tenant_id: str,
+    principal_id: str,
+    session_id: str,
+    source: str,
+    transcript_sha256: str,
+) -> bool:
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM transcript_snapshots
+                    WHERE tenant_id = %s
+                      AND principal_id = %s
+                      AND session_id = %s
+                      AND source = %s
+                      AND transcript_sha256 = %s
+                ) AS exists
+                """,
+                (tenant_id, principal_id, session_id, source, transcript_sha256),
+            )
+            row = cur.fetchone()
+            return bool(row["exists"]) if row else False
+
+
 def _fetch_raw_chat_logs(
     tenant_id: str,
     principal_id: str,

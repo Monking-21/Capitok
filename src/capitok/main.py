@@ -9,6 +9,7 @@ from capitok.db import (
     list_recent_records,
     list_recent_sessions,
     search_refined_memories,
+    transcript_snapshot_exists,
 )
 from capitok.queue.inprocess import InProcessQueueAdapter
 from capitok.queue.interface import RefineTask
@@ -21,6 +22,7 @@ from capitok.schemas import (
     SessionListItem,
     SessionListResponse,
     SessionRecordListItem,
+    TranscriptSnapshotExistsResponse,
 )
 from capitok.security import IdentityContext, require_scope
 
@@ -85,6 +87,23 @@ def search_recall_records(
         top_k=top_k,
     )
     return SearchResponse(items=[SearchResult(**row) for row in rows])
+
+
+@app.get("/v1/transcript-snapshots/exists", response_model=TranscriptSnapshotExistsResponse)
+def transcript_snapshot_exists_route(
+    session_id: str = Query(min_length=1),
+    source: str = Query(min_length=1),
+    transcript_sha256: str = Query(min_length=1),
+    identity: IdentityContext = Depends(require_scope("search")),
+) -> TranscriptSnapshotExistsResponse:
+    exists = transcript_snapshot_exists(
+        tenant_id=identity.tenant_id,
+        principal_id=identity.principal_id,
+        session_id=session_id,
+        source=source,
+        transcript_sha256=transcript_sha256,
+    )
+    return TranscriptSnapshotExistsResponse(exists=exists)
 
 
 @app.get("/v1/sessions", response_model=SessionListResponse)

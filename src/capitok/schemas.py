@@ -31,6 +31,10 @@ class SearchResponse(BaseModel):
     items: list[SearchResult]
 
 
+class TranscriptSnapshotExistsResponse(BaseModel):
+    exists: bool
+
+
 class SessionListItem(BaseModel):
     session_id: str
     source: str
