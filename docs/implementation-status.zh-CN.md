@@ -11,6 +11,8 @@
   - `GET /health`
   - `POST /v1/ingest`
   - `GET /v1/search`
+  - `GET /v1/sessions`
+  - `GET /v1/sessions/{session_id}`
 
 对应文件：
 - [src/capitok/main.py](../src/capitok/main.py)
@@ -66,6 +68,19 @@
 - 已切换为默认使用 uv 管理依赖与执行命令。
 - 文档侧已补充实施进展文件，并更新为 src 布局说明。
 
+### 1.6 会话查看与 CLI
+
+- 已在 `raw_chat_logs` 之上补齐 session-first 的会话查看接口。
+- `sessions` 列表同时支持会话汇总视图和原始记录视图。
+- 会话详情接口现在支持按 `source` 精确定位；同一 `session_id` 被多个 source 复用时会返回 `409`，避免静默串会话。
+- 已增加一个轻量 `capitok` CLI，支持：
+  - `health`
+  - `search`
+  - `sessions list`
+  - `sessions show`
+  - `codex enable`
+  - `hermes enable`
+
 对应文件：
 - [docker-compose.yml](../docker-compose.yml)
 - [docker-compose.dev.yml](../docker-compose.dev.yml)
@@ -76,6 +91,8 @@
 - [scripts/restore.sh](../scripts/restore.sh)
 - [scripts/start-api.sh](../scripts/start-api.sh)
 - [openapi.yaml](../openapi.yaml)
+- [src/capitok/cli.py](../src/capitok/cli.py)
+- [src/capitok/client_config.py](../src/capitok/client_config.py)
 
 ## 2. 进行中
 

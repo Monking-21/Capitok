@@ -11,6 +11,8 @@ This document tracks what has already been implemented and what comes next.
   - `GET /health`
   - `POST /v1/ingest`
   - `GET /v1/search`
+  - `GET /v1/sessions`
+  - `GET /v1/sessions/{session_id}`
 
 Files:
 - [src/capitok/main.py](../src/capitok/main.py)
@@ -66,6 +68,19 @@ Files:
 - uv is now the default package manager and command runner.
 - Documentation now includes a dedicated implementation status file and repository structure updates for src layout.
 
+### 1.6 Session Inspection and CLI
+
+- Added session-first archive inspection endpoints on top of `raw_chat_logs`.
+- Session list now supports both session summaries and raw record view.
+- Session detail now supports source-scoped lookup and returns `409` on ambiguous cross-source `session_id` reuse.
+- Added a thin `capitok` CLI for:
+  - `health`
+  - `search`
+  - `sessions list`
+  - `sessions show`
+  - `codex enable`
+  - `hermes enable`
+
 Files:
 - [docker-compose.yml](../docker-compose.yml)
 - [docker-compose.dev.yml](../docker-compose.dev.yml)
@@ -76,6 +91,8 @@ Files:
 - [scripts/restore.sh](../scripts/restore.sh)
 - [scripts/start-api.sh](../scripts/start-api.sh)
 - [openapi.yaml](../openapi.yaml)
+- [src/capitok/cli.py](../src/capitok/cli.py)
+- [src/capitok/client_config.py](../src/capitok/client_config.py)
 
 ## 2. In Progress
 

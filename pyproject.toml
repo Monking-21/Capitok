@@ -22,3 +22,5 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+[project.scripts]
+capitok = "capitok.cli:main"

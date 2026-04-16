@@ -1,10 +1,27 @@
-from fastapi import Depends, FastAPI, Query
+from typing import Literal
+
+from fastapi import Depends, FastAPI, HTTPException, Query
 
 from capitok.config import get_settings
-from capitok.db import insert_raw_chat_log, search_refined_memories
+from capitok.db import (
+    get_session_detail,
+    insert_raw_chat_log,
+    list_recent_records,
+    list_recent_sessions,
+    search_refined_memories,
+)
 from capitok.queue.inprocess import InProcessQueueAdapter
 from capitok.queue.interface import RefineTask
-from capitok.schemas import IngestRequest, IngestResponse, SearchResponse, SearchResult
+from capitok.schemas import (
+    IngestRequest,
+    IngestResponse,
+    SearchResponse,
+    SearchResult,
+    SessionDetailResponse,
+    SessionListItem,
+    SessionListResponse,
+    SessionRecordListItem,
+)
 from capitok.security import IdentityContext, require_scope
 
 settings = get_settings()
@@ -68,3 +85,54 @@ def search_recall_records(
         top_k=top_k,
     )
     return SearchResponse(items=[SearchResult(**row) for row in rows])
+
+
+@app.get("/v1/sessions", response_model=SessionListResponse)
+def list_sessions(
+    limit: int = Query(default=20, ge=1, le=100),
+    view: Literal["sessions", "records"] = Query(default="sessions"),
+    source: str | None = Query(default=None, min_length=1),
+    identity: IdentityContext = Depends(require_scope("search")),
+) -> SessionListResponse:
+    if view == "records":
+        rows = list_recent_records(
+            tenant_id=identity.tenant_id,
+            principal_id=identity.principal_id,
+            limit=limit,
+            source=source,
+        )
+        return SessionListResponse(
+            view=view,
+            items=[SessionRecordListItem(**row) for row in rows],
+        )
+
+    rows = list_recent_sessions(
+        tenant_id=identity.tenant_id,
+        principal_id=identity.principal_id,
+        limit=limit,
+        source=source,
+    )
+    return SessionListResponse(
+        view=view,
+        items=[SessionListItem(**row) for row in rows],
+    )
+
+
+@app.get("/v1/sessions/{session_id}", response_model=SessionDetailResponse)
+def get_session(
+    session_id: str,
+    source: str | None = Query(default=None, min_length=1),
+    identity: IdentityContext = Depends(require_scope("search")),
+) -> SessionDetailResponse:
+    try:
+        row = get_session_detail(
+            tenant_id=identity.tenant_id,
+            principal_id=identity.principal_id,
+            session_id=session_id,
+            source=source,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if row is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return SessionDetailResponse(**row)

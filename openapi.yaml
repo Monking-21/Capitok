@@ -67,6 +67,80 @@ paths:
           description: Missing scope
         '422':
           description: Validation error
+  /v1/sessions:
+    get:
+      summary: List archived sessions or raw records
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: view
+          required: false
+          schema:
+            type: string
+            enum: [sessions, records]
+            default: sessions
+        - in: query
+          name: source
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Session list or raw record view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          description: Missing or invalid API key
+        '403':
+          description: Missing scope
+        '422':
+          description: Validation error
+  /v1/sessions/{session_id}:
+    get:
+      summary: Get one archived session timeline
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: source
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Session timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '401':
+          description: Missing or invalid API key
+        '403':
+          description: Missing scope
+        '409':
+          description: Multiple sources share the same session_id; pass source
+        '404':
+          description: Session not found
+        '422':
+          description: Validation error
 
 components:
   securitySchemes:
@@ -138,3 +212,112 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SearchResult'
+    SessionListItem:
+      type: object
+      required:
+        - session_id
+        - source
+        - preview
+        - started_at
+        - updated_at
+        - record_count
+      properties:
+        session_id:
+          type: string
+        source:
+          type: string
+        preview:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        record_count:
+          type: integer
+    SessionRecordListItem:
+      type: object
+      required:
+        - id
+        - session_id
+        - source
+        - created_at
+        - input
+        - output
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        input:
+          type: string
+        output:
+          type: string
+    SessionTimelineItem:
+      type: object
+      required:
+        - id
+        - created_at
+        - input
+        - output
+        - metadata
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        input:
+          type: string
+        output:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    SessionListResponse:
+      type: object
+      required:
+        - view
+        - items
+      properties:
+        view:
+          type: string
+          enum: [sessions, records]
+        items:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/SessionListItem'
+              - $ref: '#/components/schemas/SessionRecordListItem'
+    SessionDetailResponse:
+      type: object
+      required:
+        - session_id
+        - source
+        - started_at
+        - updated_at
+        - record_count
+        - items
+      properties:
+        session_id:
+          type: string
+        source:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        record_count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionTimelineItem'
