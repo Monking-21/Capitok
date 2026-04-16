@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
 
@@ -49,6 +51,37 @@ def normalize_event(event: dict[str, Any], user_id: str | None = None) -> dict[s
         )
 
     return payload
+
+
+def extract_transcript_path(event: dict[str, Any]) -> str:
+    return str(event.get("transcript_path") or "")
+
+
+def build_transcript_snapshot_payload(
+    session_id: str,
+    user_id: str,
+    transcript_path: str | Path,
+) -> dict[str, Any]:
+    transcript_path = Path(transcript_path)
+    raw_transcript_jsonl = transcript_path.read_text(encoding="utf-8")
+    transcript_bytes = raw_transcript_jsonl.encode("utf-8")
+
+    return {
+        "session_id": session_id,
+        "user_id": user_id,
+        "source": "codex",
+        "input": "",
+        "output": "transcript snapshot archived",
+        "metadata": {
+            "event_type": "TranscriptSnapshot",
+            "origin_event_type": "Stop",
+            "transcript_path": str(transcript_path),
+            "transcript_sha256": hashlib.sha256(transcript_bytes).hexdigest(),
+            "transcript_bytes": len(transcript_bytes),
+            "transcript_line_count": len(raw_transcript_jsonl.splitlines()),
+            "raw_transcript_jsonl": raw_transcript_jsonl,
+        },
+    }
 
 
 def _tool_summary(event: dict[str, Any]) -> str:
