@@ -121,12 +121,13 @@ def transcript_snapshot_exists(
                 """
                 SELECT EXISTS (
                     SELECT 1
-                    FROM transcript_snapshots
+                    FROM raw_chat_logs
                     WHERE tenant_id = %s
                       AND principal_id = %s
                       AND session_id = %s
                       AND source = %s
-                      AND transcript_sha256 = %s
+                      AND content->'metadata'->>'event_type' = 'TranscriptSnapshot'
+                      AND content->'metadata'->>'transcript_sha256' = %s
                 ) AS exists
                 """,
                 (tenant_id, principal_id, session_id, source, transcript_sha256),
