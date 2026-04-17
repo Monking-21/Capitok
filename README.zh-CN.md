@@ -1,5 +1,7 @@
 # Capitok（中文说明）
 
+[English](README.md) | 简体中文
+
 Capitok 的核心意思是：`capitalize your token`。
 
 也就是把 Agent 已经花掉的上下文和 token 成本，沉淀成可长期保存、可迁移、可恢复、可复用的资产。
@@ -257,9 +259,4 @@ Capitok 不是一个“主实时语义记忆框架”。
 
 ## 许可证
 
-许可证尚未最终确定。
-
-候选：
-
-1. MIT
-2. Apache-2.0
+Apache-2.0。详见 [LICENSE](LICENSE)。

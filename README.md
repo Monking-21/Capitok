@@ -1,5 +1,7 @@
 # Capitok
 
+English | [简体中文](README.zh-CN.md)
+
 Capitok helps you capitalize your token.
 
 `Capitok` comes from `capitalize your token`: turn the context and token cost your agents have already spent into durable, reusable assets.
@@ -257,13 +259,4 @@ Planned contribution scope:
 
 ## License
 
-License is not finalized yet.
-
-Planned options:
-
-1. MIT
-2. Apache-2.0
-
-## Language
-
-English is the default language for global collaboration. Chinese docs are provided as reference.
+Apache-2.0. See [LICENSE](LICENSE).
