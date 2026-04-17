@@ -129,7 +129,7 @@ Capitok 当前建议使用 Hermes `0.9.0` 及以上版本。若 Hermes 未安装
 
 ### Codex 接入
 
-如果你使用 Codex hooks，Capitok 可以归档支持的 hook 事件，方便后续恢复，但不会替代 Codex 自己的记忆行为。
+如果你使用 Codex hooks，Capitok 可以归档支持的 hook 事件，并在 `Stop` 时保存完整 transcript 快照，方便后续恢复，但不会替代 Codex 自己的记忆行为。
 安装 Codex 接入时，会接管 Capitok 支持的这些 Codex 事件槽位：`SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PostToolUse` 和 `Stop`；如果这些事件已配置其他 handler，安装器会直接覆盖它们。
 安装命令为 `bash scripts/install-codex-hook.sh`。
 

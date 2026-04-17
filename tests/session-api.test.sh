@@ -90,6 +90,20 @@ class FakeCursor:
 
     def fetchall(self):
         normalized = " ".join(self._query.split())
+        if "SELECT EXISTS (" in normalized and "TranscriptSnapshot" in normalized:
+            tenant_id, principal_id, session_id, source, transcript_sha256 = self._params
+            for row in self._state.rows:
+                metadata = row["content"].get("metadata", {})
+                if (
+                    row["tenant_id"] == tenant_id
+                    and row["principal_id"] == principal_id
+                    and row["session_id"] == session_id
+                    and row["source"] == source
+                    and metadata.get("event_type") == "TranscriptSnapshot"
+                    and metadata.get("transcript_sha256") == transcript_sha256
+                ):
+                    return [{"exists": True}]
+            return [{"exists": False}]
         if "GROUP BY base.tenant_id" in normalized:
             tenant_id, principal_id, *rest = self._params
             source = None
@@ -183,6 +197,12 @@ class FakeCursor:
             }
             for row in rows
         ]
+
+    def fetchone(self):
+        rows = self.fetchall()
+        if not rows:
+            return None
+        return rows[0]
 
 
 class FakeConnection:
@@ -285,6 +305,23 @@ db.insert_raw_chat_log(
     source="hermes",
     content={"input": "hermes shared session first message", "output": "assistant reply shared 2", "metadata": {"agent": "hermes"}},
 )
+db.insert_raw_chat_log(
+    tenant_id="demo",
+    principal_id="demo",
+    session_id="session-e",
+    user_id="codex:session-e",
+    agent_id="codex",
+    source="codex",
+    content={
+        "input": "",
+        "output": "transcript snapshot archived",
+        "metadata": {
+            "agent": "codex",
+            "event_type": "TranscriptSnapshot",
+            "transcript_sha256": "a" * 64,
+        },
+    },
+)
 
 headers = {"X-API-Key": "test-key"}
 
@@ -375,4 +412,16 @@ assert hermes_detail["source"] == "hermes"
 assert hermes_detail["record_count"] == 1
 assert hermes_detail["items"][0]["input"] == "hermes shared session first message"
 assert hermes_detail["items"][0]["metadata"]["agent"] == "hermes"
+
+exists_status, exists_detail = get_json(
+    "/v1/transcript-snapshots/exists?session_id=session-e&source=codex&transcript_sha256=" + ("a" * 64)
+)
+assert exists_status == 200, exists_detail
+assert exists_detail["exists"] is True
+
+missing_exists_status, missing_exists_detail = get_json(
+    "/v1/transcript-snapshots/exists?session_id=session-e&source=codex&transcript_sha256=" + ("b" * 64)
+)
+assert missing_exists_status == 200, missing_exists_detail
+assert missing_exists_detail["exists"] is False
 PY

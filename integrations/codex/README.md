@@ -5,6 +5,7 @@ This integration archives Codex hook events into Capitok so you can keep a raw c
 ## What It Does
 
 - Copies supported Codex hook events into Capitok through the ingest API
+- Archives a full transcript snapshot on `Stop` when Codex exposes `transcript_path`
 - Preserves raw event payloads alongside a normalized archive record
 - Helps keep session history available for later replay, re-indexing, and recovery
 
@@ -24,6 +25,7 @@ The current V1 integration covers these Codex hook events:
 - Tool coverage is incomplete and currently reflects the hook payloads Codex provides
 - Non-`Bash` tools may expose less detail than shell commands
 - This is not full token capture; it archives hook-visible event data, not every token generated in Codex internals
+- Transcript snapshots preserve the full visible Codex JSONL transcript, but encrypted reasoning remains encrypted
 
 ## Install
 
@@ -49,11 +51,14 @@ If no explicit `CAPITOK_API_KEY` is set, the runtime can reuse `AUTH_API_KEYS_JS
 
 Installing also takes over the supported Codex event slots listed above. If `~/.codex/hooks.json` already defines handlers for `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, or `Stop`, the installer replaces those commands with the Capitok hook command and leaves unrelated hook entries untouched.
 
+On `Stop`, the hook runtime also attempts to archive the full transcript JSONL referenced by `transcript_path`. Exact duplicate transcript snapshots for the same session are skipped by transcript hash.
+
 ## Positioning
 
 Capitok uses the Codex integration as a lightweight archive companion:
 
 - It stores hook-visible interaction data for later recovery
+- It stores full transcript snapshots when Codex exposes them
 - It does not sit inline as a proxy between Codex and its tools
 - It does not replace Codex's own memory or session behavior
 - It is meant to preserve raw records first, then let higher-level workflows build on top

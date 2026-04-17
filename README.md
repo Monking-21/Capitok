@@ -129,7 +129,7 @@ Full guide: [integrations/hermes/README.md](integrations/hermes/README.md)
 
 ### Codex integration
 
-If you use Codex hooks, Capitok can archive supported hook events for later recovery without replacing Codex's own memory behavior.
+If you use Codex hooks, Capitok can archive supported hook events and full transcript snapshots on `Stop` for later recovery without replacing Codex's own memory behavior.
 Installing the Codex integration replaces any existing handlers for Capitok's supported Codex events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, and `Stop`.
 Install with `bash scripts/install-codex-hook.sh`.
 

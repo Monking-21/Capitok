@@ -93,7 +93,7 @@ def search_recall_records(
 def transcript_snapshot_exists_route(
     session_id: str = Query(min_length=1),
     source: str = Query(min_length=1),
-    transcript_sha256: str = Query(min_length=1),
+    transcript_sha256: str = Query(min_length=64, max_length=64),
     identity: IdentityContext = Depends(require_scope("search")),
 ) -> TranscriptSnapshotExistsResponse:
     exists = transcript_snapshot_exists(
